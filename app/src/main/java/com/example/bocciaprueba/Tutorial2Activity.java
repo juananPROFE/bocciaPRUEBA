@@ -1,4 +1,4 @@
-package org.opencv.samples.tutorial2;
+package com.example.bocciaprueba;
 
 import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
