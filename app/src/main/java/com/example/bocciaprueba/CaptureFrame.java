@@ -306,7 +306,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
             else{
                 mVideoWriter.write(frame);
                 while (true) {
-                    if (counter%100==0) {
+                    if (counter%500==0) {
                         ;
 
                         if (frame.empty()) {
@@ -383,7 +383,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
     public boolean startPlayback() {
         mImageView.setVisibility(SurfaceView.VISIBLE);
-
+        count=0;
         if (!mUseBuiltInMJPG){
             mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_ANDROID);
         } else {
@@ -423,7 +423,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                 if(!mVideoFrame.empty() && mVideoFrameAnt_gray.empty()) {
                     //Limpiando ruido
                     Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
-                    Imgproc.blur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(4, 4));
+                    Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
                     bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
                     matToBitmap(mVideoFrameAnt_blur, bmp);
                     mypath = new File(newDir, "firstFrame.jpg");
@@ -442,35 +442,40 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     }
                 } else if(!mVideoFrameAnt_gray.empty()) {
                     Imgproc.cvtColor(mVideoFrame, mVideoFrame_gray, Imgproc.COLOR_RGB2GRAY);
-                    Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
+                    Imgproc.GaussianBlur(mVideoFrame_gray, mVideoFrame_blur, new Size(3, 3),0);
+                    //Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
                    // res = Imgproc.compareHist(mVideoFrame_blur, mVideoFrameAnt_blur, Imgproc.CV_COMP_INTERSECT);
 
-                     Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
-                     Imgproc.threshold(blur_result,umbral,25,255,Imgproc.THRESH_BINARY);
-                    //Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
-                    //Imgproc.dilate(umbral,umbral,element);
-                    Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
-                    if (Core.countNonZero(umbral)>200000) {
-                        bmp = Bitmap.createBitmap(mVideoFrame_gray.cols(), mVideoFrame_gray.rows(), Bitmap.Config.ARGB_8888);
-                        matToBitmap(mVideoFrame_gray, bmp);
-                        mypath = new File(newDir, count+"other"+Core.countNonZero(umbral)+".jpg");
-                        count++;
+                    Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
+                    Imgproc.threshold(blur_result,umbral,25,255,Imgproc.THRESH_BINARY);
+                    Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
+                    Imgproc.dilate(umbral,umbral,element);
+                    //Siguiente paso, encontrar contornos
+                    //Imgproc.findContours(umbral,)
+                    //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
+                    bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
+                    matToBitmap(mVideoFrame, bmp);
+                    mypath = new File(newDir, count+"other"+Core.countNonZero(umbral)+".jpg");
+                    count++;
+                    try {
+                        fos = new FileOutputStream(mypath);
+                        // Use the compress method on the BitMap object to write image to the OutputStream
+                        bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
                         try {
-                            fos = new FileOutputStream(mypath);
-                            // Use the compress method on the BitMap object to write image to the OutputStream
-                            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                        } catch (Exception e) {
+                            fos.close();
+                        } catch (IOException e) {
                             e.printStackTrace();
-                        } finally {
-                            try {
-                                fos.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
                         }
+                    }
+                  //  if (Core.countNonZero(umbral)>150000) {
+
                         //mVideoFrameAnt_gray=mVideoFrame_gray;
                         //mVideoFrameAnt_blur=mVideoFrame_blur;
-                    }
+                   // }
+
 
                 }
 
