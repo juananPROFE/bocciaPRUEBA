@@ -43,12 +43,14 @@ import java.util.List;
 
 public class CaptureFrame extends CameraActivity implements CvCameraViewListener2, View.OnClickListener {
 
-    private static final String fecha =LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"));
+    private static String fecha;
     private static final File parentDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-    private static final File newDir = new File(parentDir,"/bocciaPRUEBA");
+    private static  File newDir = new File(parentDir,"/bocciaPRUEBA");
+
+    private static File subDir=null;
     private static final String TAG = "OCVSample::Activity";
-    private static final String FILENAME_MP4 = fecha+"_training.mp4";
-    private static final String FILENAME_AVI = fecha+"_training.avi";
+    private static String filename_MP4 = null;
+    private static String filename_AVI = null;
 
     private static final int STATUS_FINISHED_PLAYBACK = 0;
     private static final int STATUS_PREVIEW = 1;
@@ -56,7 +58,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
     private static final int STATUS_PLAYING = 3;
     private static final int STATUS_ERROR = 4;
 
-    private String mVideoFilename;
+    private String mVideoFilename="";
     private boolean mUseBuiltInMJPG = false;
 
     private int mStatus = STATUS_FINISHED_PLAYBACK;
@@ -137,10 +139,6 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         mTriggerButton.setOnClickListener(this);
         mTriggerButton.bringToFront();
 
-        if (mUseBuiltInMJPG)
-            mVideoFilename = newDir + "/" + FILENAME_AVI;
-        else
-            mVideoFilename = newDir + "/" + FILENAME_MP4;
     }
 
     @Override
@@ -296,6 +294,21 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         Mat frame =new Mat();
         Bitmap img=null;
         int counter=1;
+        fecha =LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"));
+        filename_AVI="video.avi";
+        filename_MP4 = "video.mp4";
+
+        subDir = new File(parentDir,"/bocciaPRUEBA/"+fecha);
+        if (subDir.mkdirs()){
+            Log.i(TAG, "Create Folder bocciaPrueba");
+        } else {
+            Log.i(TAG, "Folder bocciaPrueba already exists");
+        }
+        if (mUseBuiltInMJPG)
+            mVideoFilename = subDir + "/" + filename_AVI;
+        else
+            mVideoFilename = subDir + "/" + filename_MP4;
+
         mVideoWriter = new VideoWriter();
         if (!mUseBuiltInMJPG) {
             mVideoWriter.open(mVideoFilename, Videoio.CAP_ANDROID, VideoWriter.fourcc('H', '2', '6', '4'), mFPS, new Size(mWidth, mHeight));
@@ -406,6 +419,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                 File mypath;
                 FileOutputStream fos = null;
                 Bitmap bmp=null;
+                int numBola=1;
                 if (mVideoCapture == null || !mVideoCapture.isOpened()) {
                     return;
                 }
@@ -421,12 +435,22 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
                 //Obteniendo primer frame como referencia y pasandolo a mVideoFrameAnt
                 if(!mVideoFrame.empty() && mVideoFrameAnt_gray.empty()) {
+                    //desechamos los primeros 20 frames para controlar el cambio de luz.
+                    for(int i=0;i<20;i++){
+                        mVideoCapture.read(mVideoFrame);
+                        if (mVideoFrame.empty()) {
+                            if (mStatus == STATUS_PLAYING) {
+                                changeStatus();
+                            }
+                            return;
+                        }
+                    }
                     //Limpiando ruido
                     Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
                     Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
                     bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
                     matToBitmap(mVideoFrameAnt_blur, bmp);
-                    mypath = new File(newDir, "firstFrame.jpg");
+                    mypath = new File(subDir, "firstFrame.jpg");
                     try {
                         fos = new FileOutputStream(mypath);
                         // Use the compress method on the BitMap object to write image to the OutputStream
@@ -447,36 +471,47 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                    // res = Imgproc.compareHist(mVideoFrame_blur, mVideoFrameAnt_blur, Imgproc.CV_COMP_INTERSECT);
 
                     Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
-                    Imgproc.threshold(blur_result,umbral,25,255,Imgproc.THRESH_BINARY);
+                    Imgproc.threshold(blur_result,umbral,127,255,Imgproc.THRESH_BINARY);
                     Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
                     Imgproc.dilate(umbral,umbral,element);
                     //Siguiente paso, encontrar contornos
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
-                    bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
-                    matToBitmap(mVideoFrame, bmp);
-                    mypath = new File(newDir, count+"other"+Core.countNonZero(umbral)+".jpg");
-                    count++;
-                    try {
-                        fos = new FileOutputStream(mypath);
-                        // Use the compress method on the BitMap object to write image to the OutputStream
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        try {
-                            fos.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                    if(Core.countNonZero(umbral)>10000) {
+                        for(int i=0;i<20;i++) {
+                            mVideoCapture.read(mVideoFrame);
+                            if (mVideoFrame.empty()) {
+                                if (mStatus == STATUS_PLAYING) {
+                                    changeStatus();
+                                }
+                                return;
+                            }
                         }
-                    }
-                  //  if (Core.countNonZero(umbral)>150000) {
+                        bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
+                        matToBitmap(mVideoFrame, bmp);
+                        mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
+                        numBola++;
+                        count++;
+                        try {
+                            fos = new FileOutputStream(mypath);
+                            // Use the compress method on the BitMap object to write image to the OutputStream
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            try {
+                                fos.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        //  if (Core.countNonZero(umbral)>150000) {
 
                         //mVideoFrameAnt_gray=mVideoFrame_gray;
                         //mVideoFrameAnt_blur=mVideoFrame_blur;
-                   // }
-
-
+                        // }
+                        mVideoFrameAnt_blur=mVideoFrame_blur;
+                    }
                 }
 
                 //Lo siguiente a probar, commparar imágenes.
