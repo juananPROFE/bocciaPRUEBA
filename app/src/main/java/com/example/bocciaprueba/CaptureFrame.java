@@ -28,6 +28,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.video.BackgroundSubtractor;
+import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.VideoWriter;
 import org.opencv.videoio.Videoio;
@@ -86,6 +88,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
     private int count=0;
 
+    private int numBola=1;
     private double res=0;
     private Mat mVideoFrameAnt_gray;
 
@@ -290,11 +293,13 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
     }
 
     public boolean startRecording() {
+        count=0;
+        numBola=1;
         Log.i(TAG,"Starting recording");
         Mat frame =new Mat();
         Bitmap img=null;
         int counter=1;
-        fecha =LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"));
+        fecha =LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         filename_AVI="video.avi";
         filename_MP4 = "video.mp4";
 
@@ -396,7 +401,6 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
     public boolean startPlayback() {
         mImageView.setVisibility(SurfaceView.VISIBLE);
-        count=0;
         if (!mUseBuiltInMJPG){
             mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_ANDROID);
         } else {
@@ -419,7 +423,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                 File mypath;
                 FileOutputStream fos = null;
                 Bitmap bmp=null;
-                int numBola=1;
+                BackgroundSubtractor backSub;
                 if (mVideoCapture == null || !mVideoCapture.isOpened()) {
                     return;
                 }
@@ -434,7 +438,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                 }
 
                 //Obteniendo primer frame como referencia y pasandolo a mVideoFrameAnt
-                if(!mVideoFrame.empty() && mVideoFrameAnt_gray.empty()) {
+                if(!mVideoFrame.empty() && mVideoFrameAnt_blur.empty()) {
                     //desechamos los primeros 20 frames para controlar el cambio de luz.
                     for(int i=0;i<20;i++){
                         mVideoCapture.read(mVideoFrame);
@@ -445,10 +449,14 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             return;
                         }
                     }
+
+
+                   backSub= Video.createBackgroundSubtractorMOG2();
+                   backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
                     //Limpiando ruido
-                    Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
-                    Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
-                    bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
+                    //Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
+                    //Imgproc.GaussianBlur(mVideoFrameAnt_blur, mVideoFrameAnt_blur, new Size(3,3),0);
+                    bmp = Bitmap.createBitmap(mVideoFrame.cols(), mVideoFrame.rows(), Bitmap.Config.ARGB_8888);
                     matToBitmap(mVideoFrameAnt_blur, bmp);
                     mypath = new File(subDir, "firstFrame.jpg");
                     try {
@@ -464,20 +472,21 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             e.printStackTrace();
                         }
                     }
-                } else if(!mVideoFrameAnt_gray.empty()) {
+                } else if(!mVideoFrameAnt_blur.empty()) {
                     Imgproc.cvtColor(mVideoFrame, mVideoFrame_gray, Imgproc.COLOR_RGB2GRAY);
                     Imgproc.GaussianBlur(mVideoFrame_gray, mVideoFrame_blur, new Size(3, 3),0);
                     //Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
                    // res = Imgproc.compareHist(mVideoFrame_blur, mVideoFrameAnt_blur, Imgproc.CV_COMP_INTERSECT);
 
-                    Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
+                    Core.absdiff(mVideoFrame_gray, mVideoFrameAnt_blur, blur_result);
                     Imgproc.threshold(blur_result,umbral,127,255,Imgproc.THRESH_BINARY);
-                    Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
-                    Imgproc.dilate(umbral,umbral,element);
+                    //Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
+                    //Imgproc.dilate(umbral,umbral,element);
                     //Siguiente paso, encontrar contornos
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
-                    if(Core.countNonZero(umbral)>10000) {
+                    //if(Core.countNonZero(umbral)>100000)
+                     if(Core.countNonZero(umbral)>10){
                         for(int i=0;i<20;i++) {
                             mVideoCapture.read(mVideoFrame);
                             if (mVideoFrame.empty()) {
@@ -488,7 +497,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
-                        matToBitmap(mVideoFrame, bmp);
+                        matToBitmap(blur_result, bmp);
                         mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
                         numBola++;
                         count++;
@@ -506,11 +515,29 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
                         //  if (Core.countNonZero(umbral)>150000) {
-
+                         backSub= Video.createBackgroundSubtractorMOG2();
+                         backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
                         //mVideoFrameAnt_gray=mVideoFrame_gray;
                         //mVideoFrameAnt_blur=mVideoFrame_blur;
                         // }
-                        mVideoFrameAnt_blur=mVideoFrame_blur;
+                        //mVideoFrameAnt_blur=mVideoFrame_blur;
+
+                        bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
+                        matToBitmap(mVideoFrameAnt_blur, bmp);
+                        mypath = new File(subDir, "firstFrame"+numBola+".jpg");
+                        try {
+                            fos = new FileOutputStream(mypath);
+                            // Use the compress method on the BitMap object to write image to the OutputStream
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            try {
+                                fos.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
                 }
 
