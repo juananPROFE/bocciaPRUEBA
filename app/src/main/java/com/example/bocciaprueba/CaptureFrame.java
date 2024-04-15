@@ -89,6 +89,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
     private int count=0;
 
     private int numBola=1;
+
+    private int countNZ=0;
     private double res=0;
     private Mat mVideoFrameAnt_gray;
 
@@ -295,6 +297,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
     public boolean startRecording() {
         count=0;
         numBola=1;
+        countNZ=0;
+        mVideoFrameAnt_blur=new Mat();
         Log.i(TAG,"Starting recording");
         Mat frame =new Mat();
         Bitmap img=null;
@@ -451,11 +455,11 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     }
 
 
-                   backSub= Video.createBackgroundSubtractorMOG2();
-                   backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
+                   //backSub= Video.createBackgroundSubtractorMOG2();
+                   //backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
                     //Limpiando ruido
-                    //Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
-                    //Imgproc.GaussianBlur(mVideoFrameAnt_blur, mVideoFrameAnt_blur, new Size(3,3),0);
+                    Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
+                    Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
                     bmp = Bitmap.createBitmap(mVideoFrame.cols(), mVideoFrame.rows(), Bitmap.Config.ARGB_8888);
                     matToBitmap(mVideoFrameAnt_blur, bmp);
                     mypath = new File(subDir, "firstFrame.jpg");
@@ -478,16 +482,18 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     //Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
                    // res = Imgproc.compareHist(mVideoFrame_blur, mVideoFrameAnt_blur, Imgproc.CV_COMP_INTERSECT);
 
-                    Core.absdiff(mVideoFrame_gray, mVideoFrameAnt_blur, blur_result);
-                    Imgproc.threshold(blur_result,umbral,127,255,Imgproc.THRESH_BINARY);
+                    Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
+                    Imgproc.threshold(blur_result,umbral,30,255,Imgproc.THRESH_BINARY);
+
+                   // countNZ=Math.abs(countNZ-Core.countNonZero(umbral));
                     //Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
                     //Imgproc.dilate(umbral,umbral,element);
                     //Siguiente paso, encontrar contornos
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
                     //if(Core.countNonZero(umbral)>100000)
-                     if(Core.countNonZero(umbral)>10){
-                        for(int i=0;i<20;i++) {
+                     if(Core.countNonZero(umbral)>8000){
+                        for(int i=0;i<100;i++) {
                             mVideoCapture.read(mVideoFrame);
                             if (mVideoFrame.empty()) {
                                 if (mStatus == STATUS_PLAYING) {
@@ -497,7 +503,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
-                        matToBitmap(blur_result, bmp);
+                        matToBitmap(mVideoFrame, bmp);
                         mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
                         numBola++;
                         count++;
@@ -514,30 +520,34 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                                 e.printStackTrace();
                             }
                         }
-                        //  if (Core.countNonZero(umbral)>150000) {
-                         backSub= Video.createBackgroundSubtractorMOG2();
-                         backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
-                        //mVideoFrameAnt_gray=mVideoFrame_gray;
-                        //mVideoFrameAnt_blur=mVideoFrame_blur;
-                        // }
-                        //mVideoFrameAnt_blur=mVideoFrame_blur;
 
-                        bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
-                        matToBitmap(mVideoFrameAnt_blur, bmp);
-                        mypath = new File(subDir, "firstFrame"+numBola+".jpg");
-                        try {
-                            fos = new FileOutputStream(mypath);
-                            // Use the compress method on the BitMap object to write image to the OutputStream
-                            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        } finally {
-                            try {
-                                fos.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
+
+                         Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
+                         Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
+
+                        //  if (Core.countNonZero(umbral)>150000) {
+//                         backSub= Video.createBackgroundSubtractorMOG2();
+//                         backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
+//
+//                        // }
+//                        //mVideoFrameAnt_blur=mVideoFrame_blur;
+//
+//                        bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
+//                        matToBitmap(mVideoFrameAnt_blur, bmp);
+//                        mypath = new File(subDir, "firstFrame"+numBola+".jpg");
+//                        try {
+//                            fos = new FileOutputStream(mypath);
+//                            // Use the compress method on the BitMap object to write image to the OutputStream
+//                            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        } finally {
+//                            try {
+//                                fos.close();
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
                     }
                 }
 
