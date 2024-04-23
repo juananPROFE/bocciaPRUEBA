@@ -453,8 +453,6 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             return;
                         }
                     }
-
-
                    //backSub= Video.createBackgroundSubtractorMOG2();
                    //backSub.apply(mVideoFrame,mVideoFrameAnt_blur);
                     //Limpiando ruido
@@ -477,15 +475,13 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                         }
                     }
                 } else if(!mVideoFrameAnt_blur.empty()) {
-                    if(numBola>1) {
-                        for (int i = 0; i < 10; i++) {
-                            mVideoCapture.read(mVideoFrame);
-                            if (mVideoFrame.empty()) {
-                                if (mStatus == STATUS_PLAYING) {
-                                    changeStatus();
-                                }
-                                return;
+                    for(int i=0;i<20;i++) {
+                        mVideoCapture.read(mVideoFrame);
+                        if (mVideoFrame.empty()) {
+                            if (mStatus == STATUS_PLAYING) {
+                                changeStatus();
                             }
+                            return;
                         }
                     }
                     Imgproc.cvtColor(mVideoFrame, mVideoFrame_gray, Imgproc.COLOR_RGB2GRAY);
@@ -493,26 +489,19 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     //Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
                    // res = Imgproc.compareHist(mVideoFrame_blur, mVideoFrameAnt_blur, Imgproc.CV_COMP_INTERSECT);
 
-                    Core.absdiff(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result);
-                    Imgproc.threshold(blur_result,umbral,60,255,Imgproc.THRESH_BINARY);
+                    Core.subtract(mVideoFrameAnt_blur, mVideoFrame_blur, blur_result);
+                    //Imgproc.threshold(blur_result,umbral,60,255,Imgproc.THRESH_BINARY);
+                    Imgproc.adaptiveThreshold(blur_result,umbral,255,Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                            Imgproc.THRESH_BINARY_INV,17,8);
 
-                   // countNZ=Math.abs(countNZ-Core.countNonZero(umbral));
+                    // countNZ=Math.abs(countNZ-Core.countNonZero(umbral));
                     //Mat element = getStructuringElement( MORPH_ELLIPSE,new Size(4, 4),new Point(-1,-1) );
                     //Imgproc.dilate(umbral,umbral,element);
                     //Siguiente paso, encontrar contornos
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
                     //if(Core.countNonZero(umbral)>100000)
-                     if(Core.countNonZero(umbral)>10000){
-                        for(int i=0;i<30;i++) {
-                            mVideoCapture.read(mVideoFrame);
-                            if (mVideoFrame.empty()) {
-                                if (mStatus == STATUS_PLAYING) {
-                                    changeStatus();
-                                }
-                                return;
-                            }
-                        }
+                     if(Core.countNonZero(umbral)>6000){
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
                         matToBitmap(blur_result, bmp);
                         mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
@@ -531,8 +520,6 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                                 e.printStackTrace();
                             }
                         }
-
-
                          Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
                          Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
 
@@ -544,8 +531,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                          //mVideoFrameAnt_blur=mVideoFrame_blur;
 
                          bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
-                         matToBitmap(mVideoFrameAnt_blur, bmp);
-                        mypath = new File(subDir, "firstFrame"+numBola+".jpg");
+                         matToBitmap(umbral, bmp);
+                        mypath = new File(subDir, numBola+"_firstFrame.jpg");
                          numBola++;
                          try {
                             fos = new FileOutputStream(mypath);
@@ -561,6 +548,26 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
                     }
+                     else{
+                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
+                         matToBitmap(blur_result, bmp);
+                         mypath = new File(subDir,  numBola+"_NO_" + Core.countNonZero(umbral) + ".jpg");
+
+                         count++;
+                         try {
+                             fos = new FileOutputStream(mypath);
+                             // Use the compress method on the BitMap object to write image to the OutputStream
+                             bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                         } catch (Exception e) {
+                             e.printStackTrace();
+                         } finally {
+                             try {
+                                 fos.close();
+                             } catch (IOException e) {
+                                 e.printStackTrace();
+                             }
+                         }
+                     }
                 }
 
                 //Lo siguiente a probar, commparar imágenes.
