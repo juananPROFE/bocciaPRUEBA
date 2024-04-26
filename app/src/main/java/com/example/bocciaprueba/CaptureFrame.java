@@ -328,8 +328,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
             else{
                 mVideoWriter.write(frame);
                 while (true) {
-                    if (counter%500==0) {
-                        ;
+                    if (counter%240==0) {
 
                         if (frame.empty()) {
                             break;
@@ -339,7 +338,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                         if (frame.empty()) {
                             break;
                         }
-                        mVideoWriter.write(frame);
+                        //mVideoWriter.write(frame);
                     }
                     counter++;
                 }
@@ -444,7 +443,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                 //Obteniendo primer frame como referencia y pasandolo a mVideoFrameAnt
                 if(!mVideoFrame.empty() && mVideoFrameAnt_blur.empty()) {
                     //desechamos los primeros 20 frames para controlar el cambio de luz.
-                    for(int i=0;i<20;i++){
+                    for(int i=0;i<40;i++){
                         mVideoCapture.read(mVideoFrame);
                         if (mVideoFrame.empty()) {
                             if (mStatus == STATUS_PLAYING) {
@@ -474,8 +473,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             e.printStackTrace();
                         }
                     }
-                } else if(!mVideoFrameAnt_blur.empty()) {
-                    for(int i=0;i<20;i++) {
+
+                    for(int i=0;i<40;i++){
                         mVideoCapture.read(mVideoFrame);
                         if (mVideoFrame.empty()) {
                             if (mStatus == STATUS_PLAYING) {
@@ -484,6 +483,16 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             return;
                         }
                     }
+                } else if(!mVideoFrameAnt_blur.empty()) {
+                   /* for(int i=0;i<20;i++) {
+                        mVideoCapture.read(mVideoFrame);
+                        if (mVideoFrame.empty()) {
+                            if (mStatus == STATUS_PLAYING) {
+                                changeStatus();
+                            }
+                            return;
+                        }
+                    }*/
                     Imgproc.cvtColor(mVideoFrame, mVideoFrame_gray, Imgproc.COLOR_RGB2GRAY);
                     Imgproc.GaussianBlur(mVideoFrame_gray, mVideoFrame_blur, new Size(3, 3),0);
                     //Imgproc.blur(mVideoFrame_gray, mVideoFrame_blur, new Size(4, 4));
@@ -501,7 +510,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
                     //if(Core.countNonZero(umbral)>100000)
-                     if(Core.countNonZero(umbral)>6000){
+                     if(Core.countNonZero(umbral)>500){
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
                         matToBitmap(blur_result, bmp);
                         mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
@@ -520,6 +529,16 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                                 e.printStackTrace();
                             }
                         }
+
+                         for(int i=0;i<40;i++){
+                             mVideoCapture.read(mVideoFrame);
+                             if (mVideoFrame.empty()) {
+                                 if (mStatus == STATUS_PLAYING) {
+                                     changeStatus();
+                                 }
+                                 return;
+                             }
+                         }
                          Imgproc.cvtColor(mVideoFrame, mVideoFrameAnt_gray, Imgproc.COLOR_RGB2GRAY);
                          Imgproc.GaussianBlur(mVideoFrameAnt_gray, mVideoFrameAnt_blur, new Size(3,3),0);
 
@@ -531,7 +550,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                          //mVideoFrameAnt_blur=mVideoFrame_blur;
 
                          bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
-                         matToBitmap(umbral, bmp);
+                         matToBitmap(mVideoFrame, bmp);
                         mypath = new File(subDir, numBola+"_firstFrame.jpg");
                          numBola++;
                          try {
@@ -548,7 +567,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
                     }
-                     else{
+                 /*    else{
                          bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
                          matToBitmap(blur_result, bmp);
                          mypath = new File(subDir,  numBola+"_NO_" + Core.countNonZero(umbral) + ".jpg");
@@ -567,7 +586,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                                  e.printStackTrace();
                              }
                          }
-                     }
+                     }*/
                 }
 
                 //Lo siguiente a probar, commparar imágenes.
