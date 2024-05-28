@@ -96,6 +96,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
     private Mat mVideoFrame_gray;
 
+    private Mat mVideoFrame_redblue,mVideoFrame_blue;
+
     private Mat umbral;
     public CaptureFrame() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -182,6 +184,8 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         mVideoFrameAnt_blur=new Mat();
         mVideoFrameAnt_gray=new Mat();
         mVideoFrame_gray=new Mat();
+        mVideoFrame_redblue=new Mat();
+        mVideoFrame_blue=new Mat();
         blur_result=new Mat();
         umbral=new Mat();
         changeStatus();
@@ -321,14 +325,15 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         mVideoWriter = new VideoWriter();
         if (!mUseBuiltInMJPG) {
             mVideoWriter.open(mVideoFilename, Videoio.CAP_ANDROID, VideoWriter.fourcc('H', '2', '6', '4'), mFPS, new Size(mWidth, mHeight));
+
             if (!mVideoWriter.isOpened()) {
                 Log.i(TAG,"Can't record H264. Switching to MJPG");
                 mUseBuiltInMJPG = true;
             }
             else{
                 mVideoWriter.write(frame);
-                while (true) {
-                    if (counter%240==0) {
+                /*while (true) {
+                    if (counter%1000==0) {
 
                         if (frame.empty()) {
                             break;
@@ -341,7 +346,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                         //mVideoWriter.write(frame);
                     }
                     counter++;
-                }
+                }*/
 
             }
         }
@@ -409,7 +414,6 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         } else {
             mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_OPENCV_MJPEG);
         }
-
         if (!mVideoCapture.isOpened()) {
             Log.e(TAG, "Can't open video");
             Toast.makeText(this, "Can't open file " + mVideoFilename, Toast.LENGTH_SHORT).show();
@@ -442,7 +446,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
 
                 //Obteniendo primer frame como referencia y pasandolo a mVideoFrameAnt
                 if(!mVideoFrame.empty() && mVideoFrameAnt_blur.empty()) {
-                    //desechamos los primeros 20 frames para controlar el cambio de luz.
+                    //desechamos los primeros 40 frames para controlar el cambio de luz.
                     for(int i=0;i<40;i++){
                         mVideoCapture.read(mVideoFrame);
                         if (mVideoFrame.empty()) {
@@ -510,10 +514,10 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
                     //if(Core.countNonZero(umbral)>100000)
-                     if(Core.countNonZero(umbral)>500){
+                     if(Core.countNonZero(umbral)>1000){
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
                         matToBitmap(blur_result, bmp);
-                        mypath = new File(subDir,  numBola+"_" + Core.countNonZero(umbral) + ".jpg");
+                        mypath = new File(subDir,  +numBola+"_aumbral_"+ Core.countNonZero(umbral) + ".jpg");
 
                         count++;
                         try {
@@ -530,7 +534,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                             }
                         }
 
-                         for(int i=0;i<40;i++){
+                         for(int i=0;i<50;i++){
                              mVideoCapture.read(mVideoFrame);
                              if (mVideoFrame.empty()) {
                                  if (mStatus == STATUS_PLAYING) {
@@ -552,7 +556,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                          bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
                          matToBitmap(mVideoFrame, bmp);
                         mypath = new File(subDir, numBola+"_firstFrame.jpg");
-                         numBola++;
+                        // numBola++;
                          try {
                             fos = new FileOutputStream(mypath);
                             // Use the compress method on the BitMap object to write image to the OutputStream
@@ -566,6 +570,27 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                                 e.printStackTrace();
                             }
                         }
+
+                         Bolas bol=new Bolas(0,0,mVideoFrame);
+                         mVideoFrame_redblue=bol.processingImage();
+                         bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
+                         matToBitmap(mVideoFrame_redblue, bmp);
+                         mypath = new File(subDir, numBola+"_firstFrameRedBlue.jpg");
+                         numBola++;
+                         try {
+                             fos = new FileOutputStream(mypath);
+                             // Use the compress method on the BitMap object to write image to the OutputStream
+                             bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                         } catch (Exception e) {
+                             e.printStackTrace();
+                         } finally {
+                             try {
+                                 fos.close();
+                             } catch (IOException e) {
+                                 e.printStackTrace();
+                             }
+                         }
+
                     }
                  /*    else{
                          bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
@@ -641,5 +666,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
         mImageView.setVisibility(SurfaceView.VISIBLE);
         return true;
     }
+
+
 
 }
