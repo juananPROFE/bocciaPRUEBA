@@ -4,6 +4,7 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
@@ -52,11 +53,16 @@ public class Bolas {
         ArrayList <MatOfPoint> contours_final=new ArrayList<MatOfPoint>();
         //bolas rojas
         Imgproc.cvtColor(frame,frameHSV,Imgproc.COLOR_BGR2HSV);
-        Core.inRange(frameHSV,new Scalar(0,100,20),new Scalar(175,255,255),maskRed_1);
-        Core.inRange(frameHSV,new Scalar(175,100,20),new Scalar(179,255,255),maskRed_2);
-        Core.inRange(frameHSV,new Scalar(90,100,20),new Scalar(130,255,255),maskBlue);
+
+        //máscara roja
+        Core.inRange(frameHSV,new Scalar(0,200,20),new Scalar(8,255,255),maskRed_1);
+        Core.inRange(frameHSV,new Scalar(175,200,20),new Scalar(179,255,255),maskRed_2);
         Core.add(maskRed_1,maskRed_2,maskRed);
+
+        //máscara azul
+        Core.inRange(frameHSV,new Scalar(90,100,20),new Scalar(130,255,255),maskBlue);
         Core.add(maskRed,maskBlue,maskFinal);
+
         Core.bitwise_and(frame,frame,frameFinal,maskFinal);
 
         Imgproc.findContours(maskFinal,contours,new Mat(),Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
@@ -66,19 +72,31 @@ public class Bolas {
             if (area>3000){
                 //Imgproc.convexHull(c,cSuave);
                 //hullPoints.add(cSuave);
+                //contours_final.add(convertIndexesToPoints(c,cSuave));
+
+                Imgproc.moments(c,true);
                 contours_final.add(c);
             }
         }
 
-        /*for(int j=0; j < hullPoints.size(); j++){
-            MatOfPoint m = new MatOfPoint();
-            m.fromArray(hullPoints.get(j));
-            contours_final.add(m);
-        }*/
         Imgproc.drawContours(frameFinal,contours_final,-1,new Scalar(255,255,255),Imgproc.LINE_4);
 
 
         return frameFinal;
+    }
+
+    public static MatOfPoint convertIndexesToPoints(MatOfPoint contour, MatOfInt indexes) {
+        int[] arrIndex = indexes.toArray();
+        Point[] arrContour = contour.toArray();
+        Point[] arrPoints = new Point[arrIndex.length];
+
+        for (int i=0;i<arrIndex.length;i++) {
+            arrPoints[i] = arrContour[arrIndex[i]];
+        }
+
+        MatOfPoint hull = new MatOfPoint();
+        hull.fromArray(arrPoints);
+        return hull;
     }
 
     public boolean sumaRoja(){
