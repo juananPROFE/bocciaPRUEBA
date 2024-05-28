@@ -2,6 +2,7 @@ package com.example.bocciaprueba;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
@@ -43,7 +44,12 @@ public class Bolas {
         Mat frameBlue=new Mat();
         Mat frameFinal=new Mat();
         Mat hierachy=new Mat();
-        List < MatOfPoint> contours=new ArrayList<>();
+        MatOfPoint c=new MatOfPoint();
+        MatOfInt cSuave=new MatOfInt();
+        double area;
+        ArrayList <MatOfPoint> contours=new ArrayList<MatOfPoint>();
+        ArrayList <MatOfInt> hullPoints=new ArrayList<MatOfInt>();
+        ArrayList <MatOfPoint> contours_final=new ArrayList<MatOfPoint>();
         //bolas rojas
         Imgproc.cvtColor(frame,frameHSV,Imgproc.COLOR_BGR2HSV);
         Core.inRange(frameHSV,new Scalar(0,100,20),new Scalar(175,255,255),maskRed_1);
@@ -53,8 +59,24 @@ public class Bolas {
         Core.add(maskRed,maskBlue,maskFinal);
         Core.bitwise_and(frame,frame,frameFinal,maskFinal);
 
-        Imgproc.findContours(maskFinal, contours,hierachy,Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
-        for 
+        Imgproc.findContours(maskFinal,contours,new Mat(),Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
+        for (int ind=0; ind<contours.size();ind++) {
+            c=contours.get(ind);
+            area = Imgproc.contourArea(c);
+            if (area>3000){
+                //Imgproc.convexHull(c,cSuave);
+                //hullPoints.add(cSuave);
+                contours_final.add(c);
+            }
+        }
+
+        /*for(int j=0; j < hullPoints.size(); j++){
+            MatOfPoint m = new MatOfPoint();
+            m.fromArray(hullPoints.get(j));
+            contours_final.add(m);
+        }*/
+        Imgproc.drawContours(frameFinal,contours_final,-1,new Scalar(255,255,255),Imgproc.LINE_4);
+
 
         return frameFinal;
     }
