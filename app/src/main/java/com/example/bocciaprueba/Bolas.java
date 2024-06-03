@@ -6,6 +6,7 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -33,58 +34,100 @@ public class Bolas {
         return this.n_azules;
     }
 
-    public Mat processingImage(){
-        Mat frameHSV=new Mat();
-        Mat maskRed_1=new Mat();
-        Mat maskRed_2=new Mat();
-        Mat maskRed=new Mat();
-        Mat frameRed=new Mat();
-        Mat maskFinal=new Mat();
-        Mat maskBlue_2=new Mat();
-        Mat maskBlue=new Mat();
-        Mat frameBlue=new Mat();
+    public Mat processingImage() {
         Mat frameFinal=new Mat();
-        Mat hierachy=new Mat();
-        MatOfPoint c=new MatOfPoint();
-        MatOfInt cSuave=new MatOfInt();
+        Core.add(this.redObjects(),this.blueObjects(),frameFinal);
+        return frameFinal;
+    }
+
+    public Mat redObjects()
+    {
+        Mat frameHSV = new Mat();
+        Mat maskRed_1 = new Mat();
+        Mat maskRed_2 = new Mat();
+        Mat maskRed = new Mat();
+        Mat maskFinal = new Mat();
+        Mat frameFinal = new Mat();
+        MatOfPoint c = new MatOfPoint();
+        MatOfInt cSuave = new MatOfInt();
         double area;
-        ArrayList <MatOfPoint> contours=new ArrayList<MatOfPoint>();
-        ArrayList <MatOfInt> hullPoints=new ArrayList<MatOfInt>();
-        ArrayList <MatOfPoint> contours_final=new ArrayList<MatOfPoint>();
+
+        ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        ArrayList<MatOfInt> hullPoints = new ArrayList<MatOfInt>();
+        ArrayList<MatOfPoint> contours_final = new ArrayList<MatOfPoint>();
         //bolas rojas
-        Imgproc.cvtColor(frame,frameHSV,Imgproc.COLOR_RGB2HSV);
+        Imgproc.cvtColor(frame, frameHSV, Imgproc.COLOR_RGB2HSV);
 
         //máscara roja
-        Core.inRange(frameHSV,new Scalar(0,70,20),new Scalar(8,255,255),maskRed_1);
-        Core.inRange(frameHSV,new Scalar(165,70,20),new Scalar(179,255,255),maskRed_2);
-        Core.add(maskRed_1,maskRed_2,maskRed);
-       // Core.bitwise_and(frame, frame, frameFinal,maskRed);
-        //máscara azul
+        Core.inRange(frameHSV, new Scalar(0, 70, 20), new Scalar(8, 255, 255), maskRed_1);
+        Core.inRange(frameHSV, new Scalar(165, 70, 20), new Scalar(179, 255, 255), maskRed_2);
+        Core.add(maskRed_1, maskRed_2, maskRed);
+         Core.bitwise_and(frame, frame, frameFinal,maskRed);
 
-        Core.inRange(frameHSV,new Scalar(80,70,20),new Scalar(140,255,255),maskBlue);
-        Core.add(maskRed,maskBlue,maskFinal);
-
-        Core.bitwise_or(frame,frame,frameFinal,maskFinal);
-
-        Imgproc.findContours(maskFinal,contours,new Mat(),Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
-        for (int ind=0; ind<contours.size();ind++) {
-            c=contours.get(ind);
+        Imgproc.GaussianBlur(frameFinal, frameFinal, new Size(3, 3), 0);
+        Imgproc.findContours(maskRed, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        for (int ind = 0; ind < contours.size(); ind++) {
+            c = contours.get(ind);
             area = Imgproc.contourArea(c);
-            if (area>300){
-                Imgproc.convexHull(c,cSuave);
+            if (area > 500) {
+                Imgproc.convexHull(c, cSuave);
                 hullPoints.add(cSuave);
-                contours_final.add(convertIndexesToPoints(c,cSuave));
+                contours_final.add(convertIndexesToPoints(c, cSuave));
 
-                Imgproc.moments(c,true);
+                Imgproc.moments(c, true);
                 contours_final.add(c);
             }
         }
-
-        Imgproc.drawContours(frameFinal,contours_final,-1,new Scalar(255,255,255),Imgproc.LINE_4);
+        this.n_rojas=contours_final.size()/2;
+        Imgproc.drawContours(frameFinal, contours_final, -1, new Scalar(255, 255, 255), 2);
 
 
         return frameFinal;
     }
+
+    public Mat blueObjects()
+    {
+
+        Mat frameHSV = new Mat();
+        Mat maskFinal = new Mat();
+        Mat maskBlue_2 = new Mat();
+        Mat maskBlue = new Mat();
+        Mat frameBlue = new Mat();
+        Mat frameFinal = new Mat();
+        Mat hierachy = new Mat();
+        MatOfPoint c = new MatOfPoint();
+        MatOfInt cSuave = new MatOfInt();
+        double area;
+        ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        ArrayList<MatOfInt> hullPoints = new ArrayList<MatOfInt>();
+        ArrayList<MatOfPoint> contours_final = new ArrayList<MatOfPoint>();
+
+        Imgproc.cvtColor(frame, frameHSV, Imgproc.COLOR_RGB2HSV);
+
+        //máscara azul
+
+        Core.inRange(frameHSV, new Scalar(80, 70, 20), new Scalar(140, 255, 255), maskBlue);
+
+        Core.bitwise_or(frame, frame, frameFinal, maskBlue);
+        Imgproc.GaussianBlur(frameFinal, frameFinal, new Size(3, 3), 0);
+        Imgproc.findContours(maskBlue, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        for (int ind = 0; ind < contours.size(); ind++) {
+            c = contours.get(ind);
+            area = Imgproc.contourArea(c);
+            if (area > 500) {
+                Imgproc.convexHull(c, cSuave);
+                hullPoints.add(cSuave);
+                contours_final.add(convertIndexesToPoints(c, cSuave));
+                Imgproc.moments(c, true);
+                contours_final.add(c);
+            }
+        }
+        this.n_azules=contours_final.size()/2;
+        Imgproc.drawContours(frameFinal, contours_final, -1, new Scalar(255, 255, 255), 2);
+
+        return frameFinal;
+    }
+
 
     public static MatOfPoint convertIndexesToPoints(MatOfPoint contour, MatOfInt indexes) {
         int[] arrIndex = indexes.toArray();

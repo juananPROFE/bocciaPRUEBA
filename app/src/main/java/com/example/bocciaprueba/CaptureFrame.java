@@ -575,7 +575,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                          mVideoFrame_redblue=bol.processingImage();
                          bmp = Bitmap.createBitmap(mVideoFrameAnt_blur.cols(), mVideoFrameAnt_blur.rows(), Bitmap.Config.ARGB_8888);
                          matToBitmap(mVideoFrame_redblue, bmp);
-                         mypath = new File(subDir, numBola+"_firstFrameRedBlue.jpg");
+                         mypath = new File(subDir, numBola+"_firstFrame_Rojas_"+bol.getN_rojas()+"_Azules_"+bol.getN_azules()+".jpg");
                          numBola++;
                          try {
                              fos = new FileOutputStream(mypath);
