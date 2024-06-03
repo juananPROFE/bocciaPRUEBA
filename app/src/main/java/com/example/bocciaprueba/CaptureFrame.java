@@ -514,7 +514,7 @@ public class CaptureFrame extends CameraActivity implements CvCameraViewListener
                     //Imgproc.findContours(umbral,)
                     //Core.compare(mVideoFrame_blur, mVideoFrameAnt_blur, blur_result, Core.CMP_EQ);
                     //if(Core.countNonZero(umbral)>100000)
-                     if(Core.countNonZero(umbral)>1000){
+                     if(Core.countNonZero(umbral)>100){
                         bmp = Bitmap.createBitmap(umbral.cols(), umbral.rows(), Bitmap.Config.ARGB_8888);
                         matToBitmap(blur_result, bmp);
                         mypath = new File(subDir,  +numBola+"_aumbral_"+ Core.countNonZero(umbral) + ".jpg");

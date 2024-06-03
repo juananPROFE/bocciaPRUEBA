@@ -52,27 +52,28 @@ public class Bolas {
         ArrayList <MatOfInt> hullPoints=new ArrayList<MatOfInt>();
         ArrayList <MatOfPoint> contours_final=new ArrayList<MatOfPoint>();
         //bolas rojas
-        Imgproc.cvtColor(frame,frameHSV,Imgproc.COLOR_BGR2HSV);
+        Imgproc.cvtColor(frame,frameHSV,Imgproc.COLOR_RGB2HSV);
 
         //máscara roja
-        Core.inRange(frameHSV,new Scalar(0,200,20),new Scalar(8,255,255),maskRed_1);
-        Core.inRange(frameHSV,new Scalar(175,200,20),new Scalar(179,255,255),maskRed_2);
+        Core.inRange(frameHSV,new Scalar(0,70,20),new Scalar(8,255,255),maskRed_1);
+        Core.inRange(frameHSV,new Scalar(165,70,20),new Scalar(179,255,255),maskRed_2);
         Core.add(maskRed_1,maskRed_2,maskRed);
-
+       // Core.bitwise_and(frame, frame, frameFinal,maskRed);
         //máscara azul
-        Core.inRange(frameHSV,new Scalar(90,100,20),new Scalar(130,255,255),maskBlue);
+
+        Core.inRange(frameHSV,new Scalar(80,70,20),new Scalar(140,255,255),maskBlue);
         Core.add(maskRed,maskBlue,maskFinal);
 
-        Core.bitwise_and(frame,frame,frameFinal,maskFinal);
+        Core.bitwise_or(frame,frame,frameFinal,maskFinal);
 
         Imgproc.findContours(maskFinal,contours,new Mat(),Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
         for (int ind=0; ind<contours.size();ind++) {
             c=contours.get(ind);
             area = Imgproc.contourArea(c);
-            if (area>3000){
-                //Imgproc.convexHull(c,cSuave);
-                //hullPoints.add(cSuave);
-                //contours_final.add(convertIndexesToPoints(c,cSuave));
+            if (area>300){
+                Imgproc.convexHull(c,cSuave);
+                hullPoints.add(cSuave);
+                contours_final.add(convertIndexesToPoints(c,cSuave));
 
                 Imgproc.moments(c,true);
                 contours_final.add(c);
