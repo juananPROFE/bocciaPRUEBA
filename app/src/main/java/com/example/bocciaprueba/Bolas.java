@@ -36,7 +36,46 @@ public class Bolas {
 
     public Mat processingImage() {
         Mat frameFinal=new Mat();
-        Core.add(this.redObjects(),this.blueObjects(),frameFinal);
+        Mat frameWhiteRed=new Mat();
+        Core.add(this.whiteBall(),this.redObjects(),frameWhiteRed);
+        Core.add(frameWhiteRed,this.blueObjects(),frameFinal);
+        return frameFinal;
+    }
+
+    public Mat whiteBall()
+    {
+
+        Mat frameHSV = new Mat();
+        Mat frameBinary=new Mat();
+        Mat maskWhite = new Mat();
+        Mat frameFinal = new Mat();
+        MatOfPoint c = new MatOfPoint();
+        MatOfInt cSuave = new MatOfInt();
+        double area;
+        ArrayList<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        ArrayList<MatOfInt> hullPoints = new ArrayList<MatOfInt>();
+        ArrayList<MatOfPoint> contours_final = new ArrayList<MatOfPoint>();
+
+        Imgproc.cvtColor(frame, frameHSV, Imgproc.COLOR_RGB2HSV);
+
+        Core.inRange(frameHSV, new Scalar(0, 0, 168), new Scalar(172, 20, 255), maskWhite);
+
+        Core.bitwise_and(frame, frame, frameFinal, maskWhite);
+        Imgproc.GaussianBlur(frameFinal, frameFinal, new Size(3, 3), 0);
+        Imgproc.findContours(maskWhite, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        for (int ind = 0; ind < contours.size(); ind++) {
+            c = contours.get(ind);
+            area = Imgproc.contourArea(c);
+            if (area > 500) {
+                Imgproc.convexHull(c, cSuave);
+                hullPoints.add(cSuave);
+                contours_final.add(convertIndexesToPoints(c, cSuave));
+                Imgproc.moments(c, true);
+                contours_final.add(c);
+            }
+        }
+        Imgproc.drawContours(frameFinal, contours_final, -1, new Scalar(0, 255, 0), 2);
+
         return frameFinal;
     }
 
